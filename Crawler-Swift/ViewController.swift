@@ -77,29 +77,25 @@ class ViewController: UIViewController {
         
         view.endEditing(true)
         
-        Hud.showWait(message: "正在爬虫", autoClear: false)
-        
         guard let keyword = animationNameField.text else {
-            Hud.clear()
             return
         }
         
         if keyword.isEmpty {
-            Hud.clear()
             return
         }
         
         guard let number = numberField.text else {
-            Hud.clear()
             return
         }
         
         guard let num = Int(number) else {
-            Hud.clear()
             return
         }
         
-        let html = searchByKeyword("进击的巨人")
+        Hud.showWait(message: "正在爬虫", autoClear: false)
+        
+        let html = searchByKeyword(keyword)
         
         let showRegex = regex(pattern: showPattern)
         
@@ -204,7 +200,7 @@ extension ViewController {
         let nsString = html as NSString
         
         let detailURLStrings = results.map { (result) -> String in
-            let show = nsString.substring(with: result.range).replacingOccurrences(of: "<a href=\"", with: "").replacingOccurrences(of: "\" target=\"_blank\">", with: "")
+            let show = nsString.substring(with: result.range).replacingOccurrences(of: #"<a href=""#, with: "").replacingOccurrences(of: #"" target="_blank">"#, with: "")
             let detailURL = baseURL + "/" + show
             return detailURL
         }
@@ -280,10 +276,11 @@ extension ViewController {
             return nil
         }
         
+        // 这里的单个" 不能用#"""#表示 因为"""也是一个字符串修饰符
         let href = firstInfo.replacingOccurrences(of: #"href=""#, with: "").replacingOccurrences(of: "\"", with: "")
         let downloadURL = baseURL + "/" + href
         
-        let dateAndHash = (href.replacingOccurrences(of: "down.php?", with: "").split(separator: "&"))
+        let dateAndHash = (href.replacingOccurrences(of: #"down.php?"#, with: "").split(separator: "&"))
         
         let dateHashs = dateAndHash.map { (subString) -> [String?] in
             let string = String(subString)
@@ -327,15 +324,15 @@ extension ViewController {
                 return nil
             }
             
-            guard let detailWebString = String(data: data, encoding: .utf8) else {
+            guard let detailHtml = String(data: data, encoding: .utf8) else {
                 return nil
             }
             
-            let titleResults = matchInfo(regex: titleRegex, html: detailWebString)
-            let title = detailURLTitle(results: titleResults, html: detailWebString)
+            let titleResults = matchInfo(regex: titleRegex, html: detailHtml)
+            let title = detailURLTitle(results: titleResults, html: detailHtml)
             
-            let seedResults = matchInfo(regex: seedRegex, html: detailWebString)
-            let seed = detailURLSeed(results: seedResults, html: detailWebString)
+            let seedResults = matchInfo(regex: seedRegex, html: detailHtml)
+            let seed = detailURLSeed(results: seedResults, html: detailHtml)
             
             let hrefResults = matchInfo(regex: hrefRegex, html: seed)
             let seedDownloadInfo = getSeedDownloadInfo(results: hrefResults, seed: seed, title: title)
@@ -348,9 +345,17 @@ extension ViewController {
 
 /// 种子信息
 struct SeedDownloadInfo {
+    
+    /// 下载地址
     var url: String?
+    
+    /// 文件名称
     var title: String?
+    
+    /// 时间戳
     var date: String?
+    
+    /// 哈希值
     var hash: String?
 }
 
