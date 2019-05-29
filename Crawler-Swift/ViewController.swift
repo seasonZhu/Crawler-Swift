@@ -17,7 +17,8 @@ class ViewController: UIViewController {
     let searchApi = "/search.php?keyword="
     
     // 匹配show的正在表达 Swift5 新特性 在##之间的字符串 可以不用\对特殊符号进行转义了
-    let showPattern = #"<a href="show-.*" target="_blank">"#
+    //let showPattern = #"<a href="show-.*" target="_blank">"#
+    let showPattern = #"show-\w{40}.html"#
     
     // 用于匹配种子下载地址的正则表达式
     let seedPattern = #"<a id="download" href=".*">"#
@@ -27,6 +28,16 @@ class ViewController: UIViewController {
     
     // 下载文件的标题正则匹配
     let titlePattern = #"<title>.*</title>"#
+    
+    // 是否使用hash作为文件名
+    var isUseHashAsTitle = false
+    
+    private lazy var useHashAsTitleSwitch: UISwitch = {
+        let `switch` = UISwitch()
+        `switch`.center = CGPoint(x: view.center.x, y: view.center.y - 88 * 2)
+        `switch`.addTarget(self, action: #selector(switchValueChangedAction(_:)), for: .valueChanged)
+        return `switch`
+    }()
     
     private lazy var animationNameField: UITextField = {
         let textField = UITextField(frame: CGRect(x: 0, y: 0, width: view.frame.width - 20, height: 66))
@@ -63,13 +74,19 @@ class ViewController: UIViewController {
         button.addTarget(self, action: #selector(searchButtonAction(_:)), for: .touchUpInside)
         return button
     }()
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        view.addSubview(useHashAsTitleSwitch)
         view.addSubview(animationNameField)
         view.addSubview(numberField)
         view.addSubview(searchButton)
+    }
+    
+    @objc func switchValueChangedAction(_ sender: UISwitch) {
+        sender.isOn = !sender.isOn
+        isUseHashAsTitle = sender.isOn
     }
     
     @objc
@@ -125,6 +142,7 @@ class ViewController: UIViewController {
                 Hud.showMessage(message: "爬虫完成", autoClear: true, autoClearTime: 2, responseTap: false) {
                     let animationListController = AniamtionListController(style: .plain)
                     animationListController.seedDownloadInfos = seedDownloadInfos
+                    animationListController.isUseHashAsTitle = self.isUseHashAsTitle
                     self.navigationController?.pushViewController(animationListController, animated: true)
                 }
             }
@@ -200,8 +218,8 @@ extension ViewController {
         let nsString = html as NSString
         
         let detailURLStrings = results.map { (result) -> String in
-            let show = nsString.substring(with: result.range).replacingOccurrences(of: #"<a href=""#, with: "").replacingOccurrences(of: #"" target="_blank">"#, with: "")
-            let detailURL = baseURL + "/" + show
+            //let show = nsString.substring(with: result.range).replacingOccurrences(of: #"<a href=""#, with: "").replacingOccurrences(of: #"" target="_blank">"#, with: "")
+            let detailURL = baseURL + "/" + nsString.substring(with: result.range)
             return detailURL
         }
         
@@ -292,6 +310,7 @@ extension ViewController {
             return propert
         }
         
+        // dateHashs = [["date", "时间戳"], ["hash", "哈希值"]]
         guard let date = dateHashs.first?.last, let hash = dateHashs.last?.last else {
             return nil
         }

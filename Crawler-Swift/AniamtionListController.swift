@@ -11,6 +11,8 @@ import UIKit
 class AniamtionListController: UITableViewController {
     
     var seedDownloadInfos: [SeedDownloadInfo?]?
+    
+    var isUseHashAsTitle = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -44,13 +46,17 @@ class AniamtionListController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: false)
         if let seedDownloadInfos = seedDownloadInfos, seedDownloadInfos.count >= indexPath.row {
-            let seedDownloadInfo = seedDownloadInfos[indexPath.row]
             
-            guard let urlString = seedDownloadInfo?.url, let title = seedDownloadInfo?.title else {
+            Hud.showWait(message: "正在下载种子", autoClear: false)
+            
+            let seedDownloadInfo = seedDownloadInfos[indexPath.row]
+            //  写入的时候 如果使用动画的title即一大串中文字符串的时候老是莫名出错,如果将hash作为title则不会出现这样的问题
+            guard let urlString = seedDownloadInfo?.url, let title = isUseHashAsTitle ? seedDownloadInfo?.hash : seedDownloadInfo?.title else {
                 return
             }
             
             let seed = title + ".torrent"
+            //  打开iTunes中的文件共享 就是共享的Documents文件夹 可以看见里面下载的种子
             let documents = NSHomeDirectory() + "/Documents/"
             
             // 已包含文件就不下载
@@ -71,10 +77,21 @@ class AniamtionListController: UITableViewController {
                 
                 DispatchQueue.main.async {
                     
+                    Hud.clear()
+                    
                     let path = documents + seed
                     print(path)
                     let fileURL = URL(fileURLWithPath: path)
-                    try? data.write(to: fileURL)
+                    
+                    do {
+                        try data.write(to: fileURL)
+                        Hud.showMessage(message: fileURL.absoluteString)
+                    }catch {
+                        print(error)
+                        let errorMessage = (error as NSError).domain
+                        Hud.showMessage(message: errorMessage)
+                    }
+                    
                 }
             }
         }
